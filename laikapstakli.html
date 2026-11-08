@@ -1,0 +1,101 @@
+
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+<meta charset="UTF-8">
+<title>Grāmatas - MM</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 750px; margin: 30px auto; padding: 0 16px; }
+  input, button { padding: 8px; font-size: 15px; }
+  #kartite { margin-top: 20px; }
+  .rezgis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+  .gramata { border: 1px solid #ccc; border-radius: 10px; padding: 12px; }
+  .gramata img { width: 100%; height: 190px; object-fit: contain; }
+  .gramata h3 { font-size: 16px; }
+  .gramata p { font-size: 14px; }
+  .kluda { color: #c00; }
+</style>
+</head>
+<body>
+
+<h1>Grāmatu meklēšana</h1>
+
+<input id="meklet" placeholder="Grāmata vai autors" value="Tolkien"
+       onkeydown="if (event.key === 'Enter') mekletGramatas()">
+<button onclick="mekletGramatas()">Meklēt</button>
+
+<div id="kartite">Ievadi grāmatu vai autoru.</div>
+
+<script>
+async function mekletGramatas() {
+  const kartite = document.getElementById('kartite');
+  const teksts = document.getElementById('meklet').value.trim();
+
+  if (teksts === "") {
+    kartite.innerHTML = '<span class="kluda">Ievadi meklējamo tekstu!</span>';
+    return;
+  }
+
+  kartite.textContent = "Meklē...";
+
+  try {
+    const url = 'https://openlibrary.org/search.json?q='
+      + encodeURIComponent(teksts)
+      + '&limit=10&fields=title,author_name,first_publish_year,cover_i';
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+
+    const dati = await res.json();
+    console.log(dati);
+
+    if (dati.docs.length === 0) {
+      kartite.textContent = "Grāmatas nav atrastas.";
+      return;
+    }
+
+    const rezgis = document.createElement('div');
+    rezgis.className = 'rezgis';
+
+    for (const gramata of dati.docs) {
+      const bloks = document.createElement('div');
+      bloks.className = 'gramata';
+
+      if (gramata.cover_i) {
+        const bilde = document.createElement('img');
+        bilde.src = 'https://covers.openlibrary.org/b/id/'
+          + gramata.cover_i + '-M.jpg';
+        bilde.alt = 'Grāmatas vāks';
+        bilde.loading = 'lazy';
+        bloks.appendChild(bilde);
+      } else {
+        const navVaka = document.createElement('p');
+        navVaka.textContent = 'Nav vāka';
+        bloks.appendChild(navVaka);
+      }
+
+      const nosaukums = document.createElement('h3');
+      nosaukums.textContent = gramata.title || 'Bez nosaukuma';
+
+      const autors = document.createElement('p');
+      autors.textContent = 'Autors: '
+        + (gramata.author_name?.join(', ') || 'Nav zināms');
+
+      const gads = document.createElement('p');
+      gads.textContent = 'Gads: '
+        + (gramata.first_publish_year || 'Nav zināms');
+
+      bloks.append(nosaukums, autors, gads);
+      rezgis.appendChild(bloks);
+    }
+
+    kartite.replaceChildren(rezgis);
+
+  } catch (e) {
+    kartite.textContent = 'Neizdevās ielādēt: ' + e.message;
+  }
+}
+</script>
+
+</body>
+</html>
